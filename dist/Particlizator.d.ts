@@ -3,6 +3,7 @@ export declare class Particlizator {
     private scene;
     private renderer;
     private svgRender;
+    private animationId;
     private renderToSVG;
     private controls;
     private gui;
@@ -19,4 +20,5 @@ export declare class Particlizator {
     animate: (time?: number) => void;
     private onWindowResize;
     private addPresetsToGui;
+    private storeImage;
 }

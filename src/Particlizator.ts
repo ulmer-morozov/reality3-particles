@@ -4,7 +4,7 @@ import {PLYLoader} from 'three/examples/jsm/loaders/PLYLoader';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 import {SVGRenderer} from 'three/examples/jsm/renderers/SVGRenderer';
 import {spriteCollection, SpritePreset} from "./spriteCollection";
-import {nameof, saveSvg, settingsName} from "./utils";
+import {nameof, saveImage, saveSvg, settingsName} from "./utils";
 import {ISettings} from "./ISettings";
 
 export class Particlizator {
@@ -12,6 +12,8 @@ export class Particlizator {
     private scene: THREE.Scene;
     private renderer: THREE.WebGLRenderer;
     private svgRender: SVGRenderer;
+
+    private animationId: number;
 
     private renderToSVG = false;
 
@@ -45,11 +47,18 @@ export class Particlizator {
         this.scene.add(this.camera);
 
 
-        this.renderer = new THREE.WebGLRenderer();
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true,
+            preserveDrawingBuffer: true // для экспорта
+        });
+
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.autoClear = true;
-        this.renderer.setClearColor(0xffffff);
+        // this.renderer.setClearColor(new THREE.Color(0xffffff));
+        // this.renderer.setClearAlpha(0);
+
 
         this.svgRender = new SVGRenderer();
         this.svgRender.setSize(window.innerWidth, window.innerHeight);
@@ -116,9 +125,6 @@ export class Particlizator {
 
             this.spriteUpdate(this.settings.sprite);
             this.particlesUpdate();
-
-            this.render(0);
-
         });
 
         // this.scene.add(new THREE.AxesHelper(5))
@@ -144,6 +150,8 @@ export class Particlizator {
         this.gui.add(this.settings, nameof<ISettings>(x => x.fogDensity), 0, 0.1)
             .step(0.001)
             .onChange(this.fogUpdate);
+
+        this.gui.add(this, nameof<Particlizator>(x => x.storeImage));
 
         window.onclick = () => {
             if (!this.renderToSVG)
@@ -191,12 +199,15 @@ export class Particlizator {
             this.renderer.render(this.scene, this.camera);
 
         this.controls.update();
-
     }
 
     animate = (time: number = 0) => {
-        if (!this.renderToSVG)
-            requestAnimationFrame(this.animate);
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = undefined;
+        }
+
+        this.animationId = requestAnimationFrame(this.animate);
         this.render(time);
     }
 
@@ -211,5 +222,34 @@ export class Particlizator {
 
         this.gui.add(this.settings, nameof<ISettings>(x => x.sprite), spriteLabels)
             .onChange(this.spriteUpdate);
+    }
+
+    private storeImage = (): void => {
+        if (this.renderer === undefined)
+            return;
+
+        cancelAnimationFrame(this.animationId);
+
+        const cameraAspect = this.camera.aspect;
+        const size = new THREE.Vector2();
+
+        this.renderer.getSize(size);
+        this.renderer.setPixelRatio(1);
+        this.renderer.setSize(4094, 4096, true);
+
+        this.camera.aspect = 1;
+        this.camera.updateProjectionMatrix();
+
+        this.render(0);
+
+        saveImage(this.renderer.domElement, 'particle-poster');
+
+        this.renderer.setPixelRatio(devicePixelRatio);
+        this.renderer.setSize(size.width, size.height, true);
+
+        this.camera.aspect = cameraAspect;
+        this.camera.updateProjectionMatrix();
+
+        this.animate();
     }
 }
