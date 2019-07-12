@@ -2,34 +2,44 @@
 <html lang="">
 
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="x-ua-compatible" content="ie=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>
-    Typescript Webpack Starter
-  </title>
+    <title>
+        Typescript Webpack Starter
+    </title>
 
-  <meta name="description" content="Typescript Webpack Starter">
+    <meta name="description" content="Typescript Webpack Starter">
 
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-    }
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
 
-    canvas {
-      width: 100vw;
-      height: 100vh;
-    }
+        canvas {
+            width: 100vw;
+            height: 100vh;
+        }
 
-    svg{
-      pointer-events: none;
-    }
-  </style>
+        canvas.drag-active{
+          background-color: red;
+        }
+
+        svg {
+            pointer-events: none;
+        }
+    </style>
 </head>
 
 <body>
+
+<canvas id="main-canvas"
+        ondrop="dropHandler(event);"
+        ondragenter="dragEnterHandler(event);"
+        ondragleave="dragLeaveHandler(event);"></canvas>
+
 <script type="text/javascript" src="app.bundle.js"></script></body>
 
 </html>

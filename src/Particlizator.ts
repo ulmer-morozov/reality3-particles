@@ -2,32 +2,24 @@ import * as THREE from 'three';
 import {GUI} from 'dat.gui';
 import {PLYLoader} from 'three/examples/jsm/loaders/PLYLoader';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
-import {SVGRenderer} from 'three/examples/jsm/renderers/SVGRenderer';
 import {spriteCollection, SpritePreset} from "./spriteCollection";
-import {nameof, saveImage, saveSvg, settingsName} from "./utils";
+import {nameof, saveImage} from "./utils";
 import {ISettings} from "./ISettings";
 
 export class Particlizator {
-    private camera: THREE.PerspectiveCamera;
-    private scene: THREE.Scene;
-    private renderer: THREE.WebGLRenderer;
-    private svgRender: SVGRenderer;
+    private readonly scene: THREE.Scene;
+    private readonly controls: OrbitControls;
+    private readonly renderer: THREE.WebGLRenderer;
+    private readonly camera: THREE.PerspectiveCamera;
+
+    private readonly gui: GUI;
+    private readonly settings: ISettings;
+    private readonly presets: { [label: string]: SpritePreset };
 
     private animationId: number;
-
-    private renderToSVG = false;
-
-    private controls: OrbitControls;
-
-    private gui: GUI;
-
-    private presets: { [label: string]: SpritePreset };
-
-    private settings: ISettings;
-
     private pointsMaterial: THREE.PointsMaterial;
 
-    executeDependency() {
+    constructor(private readonly canvas: HTMLCanvasElement) {
         this.presets = {};
 
         spriteCollection.forEach(sprite => this.presets[sprite.label] = new SpritePreset(sprite));
@@ -46,98 +38,51 @@ export class Particlizator {
         this.scene = new THREE.Scene();
         this.scene.add(this.camera);
 
-
         this.renderer = new THREE.WebGLRenderer({
             antialias: true,
             alpha: true,
+            canvas: canvas,
             preserveDrawingBuffer: true // для экспорта
         });
 
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
         this.renderer.autoClear = true;
-        // this.renderer.setClearColor(new THREE.Color(0xffffff));
-        // this.renderer.setClearAlpha(0);
 
+        this.controls = new OrbitControls(this.camera, this.canvas);
 
-        this.svgRender = new SVGRenderer();
-        this.svgRender.setSize(window.innerWidth, window.innerHeight);
-        this.svgRender.autoClear = true;
-        this.svgRender.setClearColor(new THREE.Color(0xffffff), 0);
-
-        const renderElement = this.renderToSVG
-            ? this.svgRender.domElement
-            : this.renderer.domElement;
-
-        document.body.appendChild(renderElement);
-
-        this.controls = new OrbitControls(this.camera, renderElement as any);
+        this.gui = new GUI({autoPlace: true});
 
         this.initGui();
-        this.matChanger();
 
         window.addEventListener('resize', this.onWindowResize, false);
+    }
 
+    public loadModel = (url: string): void => {
+        this.scene.children.forEach(child => this.scene.remove(child));
 
-        // PLY file
         const loader = new PLYLoader();
 
-        loader.load(require('./assets/pointcloud2.ply'), (geometry: THREE.BufferGeometry) => {
+        loader.load(url, (geometry: THREE.BufferGeometry) => {
             geometry.computeVertexNormals();
-
             geometry.scale(0.1, 0.1, 0.1);
 
+            this.pointsMaterial = new THREE.PointsMaterial({
+                alphaTest: 0.5,
+                transparent: true,
+                sizeAttenuation: true
+            });
 
-            if (this.renderToSVG) {
-                const cube = new THREE.BoxBufferGeometry(20, 20, 20);
-                const mesh = new THREE.Mesh(cube, new THREE.MeshBasicMaterial({
-                    vertexColors: THREE.VertexColors,
-                    color: 0x0000ff
-                }));
-                // mesh.position.x = 500;
-                mesh.rotation.x = Math.random();
-                mesh.rotation.y = Math.random();
-                // this.scene.add(mesh);
-
-
-                this.pointsMaterial = new THREE.PointsMaterial({color: 0x000000, size: 0.1, sizeAttenuation: true});
-                const starField = new THREE.Points(geometry, this.pointsMaterial);
-
-                this.scene.add(starField);
-
-            } else {
-
-                const textureUrl = require('./assets/sprites/black-point.png');
-                const sprite = new THREE.TextureLoader().load(textureUrl);
-                this.pointsMaterial = new THREE.PointsMaterial({
-                    color: 0xff0000,
-                    size: this.settings.particleSize,
-                    map: sprite,
-                    alphaTest: 0.5,
-                    transparent: true,
-                    sizeAttenuation: true
-                });
-                const starField = new THREE.Points(geometry, this.pointsMaterial);
-
-
-                this.scene.add(starField);
-            }
+            const starField = new THREE.Points(geometry, this.pointsMaterial);
+            this.scene.add(starField);
 
             this.spriteUpdate(this.settings.sprite);
             this.particlesUpdate();
         });
 
-        // this.scene.add(new THREE.AxesHelper(5))
-
     }
 
-    private matChanger = (): void => {
-
-    };
-
     private initGui = (): void => {
-        this.gui = new GUI({autoPlace: true});
-
         this.gui.add(this.settings, nameof<ISettings>(x => x.particleSize), 0.01, 1)
             .step(0.01)
             .onChange(this.particlesUpdate);
@@ -152,14 +97,6 @@ export class Particlizator {
             .onChange(this.fogUpdate);
 
         this.gui.add(this, nameof<Particlizator>(x => x.storeImage));
-
-        window.onclick = () => {
-            if (!this.renderToSVG)
-                return;
-
-            saveSvg(this.svgRender.domElement, 'file.svg');
-            window.onclick = undefined;
-        }
     }
 
     private spriteUpdate = (spriteLabel: string): void => {
@@ -192,12 +129,7 @@ export class Particlizator {
 
     private render = (timestamp: number): void => {
         const time = timestamp * 0.00015;
-
-        if (this.renderToSVG)
-            this.svgRender.render(this.scene, this.camera);
-        else
-            this.renderer.render(this.scene, this.camera);
-
+        this.renderer.render(this.scene, this.camera);
         this.controls.update();
     }
 
@@ -212,9 +144,9 @@ export class Particlizator {
     }
 
     private onWindowResize = (): void => {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.aspect = this.canvas.clientWidth / this.canvas.clientHeight;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
     }
 
     private addPresetsToGui() {

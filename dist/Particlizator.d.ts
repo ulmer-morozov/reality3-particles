@@ -1,17 +1,16 @@
 export declare class Particlizator {
-    private camera;
-    private scene;
-    private renderer;
-    private svgRender;
+    private readonly canvas;
+    private readonly scene;
+    private readonly controls;
+    private readonly renderer;
+    private readonly camera;
+    private readonly gui;
+    private readonly settings;
+    private readonly presets;
     private animationId;
-    private renderToSVG;
-    private controls;
-    private gui;
-    private presets;
-    private settings;
     private pointsMaterial;
-    executeDependency(): void;
-    private matChanger;
+    constructor(canvas: HTMLCanvasElement);
+    loadModel: (url: string) => void;
     private initGui;
     private spriteUpdate;
     private particlesUpdate;
