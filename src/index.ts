@@ -1,7 +1,7 @@
-import { MyLibrary } from './MyLibrary';
+import { Particlizator } from './Particlizator';
 
 console.log('See this in your browser console: Typescript Webpack Starter Launched');
 
-const myLibrary = new MyLibrary();
+const myLibrary = new Particlizator();
 myLibrary.executeDependency();
 myLibrary.animate(0);

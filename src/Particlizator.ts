@@ -3,38 +3,11 @@ import {GUI} from 'dat.gui';
 import {PLYLoader} from 'three/examples/jsm/loaders/PLYLoader';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 import {SVGRenderer} from 'three/examples/jsm/renderers/SVGRenderer';
+import {spriteCollection, SpritePreset} from "./spriteCollection";
+import {nameof, saveSvg, settingsName} from "./utils";
+import {ISettings} from "./ISettings";
 
-
-function saveSvg(svgEl: SVGElement, name: string) {
-    svgEl.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    const svgData = svgEl.outerHTML;
-    const preface = '<?xml version="1.0" standalone="no"?>\r\n';
-    const svgBlob = new Blob([preface, svgData], {type: "image/svg+xml;charset=utf-8"});
-    const svgUrl = URL.createObjectURL(svgBlob);
-    const downloadLink = document.createElement("a");
-    downloadLink.href = svgUrl;
-    downloadLink.download = name;
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
-}
-
-import {MyBokehShader, IBokehShaderUniforms} from './Bokeh';
-import {BokehDepthShader} from './bokehDepthShader';
-
-export interface Foo {
-    executeDependency: Function;
-}
-
-interface ISettings {
-    particleSize: number;
-}
-
-const nameof = (propertyFunction: (x: ISettings) => any): string => {
-    return /\.([^\.;]+);?\s*\}$/.exec(propertyFunction.toString())[1];
-}
-
-export class MyLibrary implements Foo {
+export class Particlizator {
     private camera: THREE.PerspectiveCamera;
     private scene: THREE.Scene;
     private renderer: THREE.WebGLRenderer;
@@ -46,13 +19,24 @@ export class MyLibrary implements Foo {
 
     private gui: GUI;
 
-    private effectController: ISettings = {
-        particleSize: 1.0
-    };
+    private presets: { [label: string]: SpritePreset };
+
+    private settings: ISettings;
 
     private pointsMaterial: THREE.PointsMaterial;
 
     executeDependency() {
+        this.presets = {};
+
+        spriteCollection.forEach(sprite => this.presets[sprite.label] = new SpritePreset(sprite));
+
+        this.settings = {
+            particleSize: 0.5,
+            sprite: 'point',
+            fog: false,
+            fogDensity: 0
+        }
+
         this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 3000);
         this.camera.position.y = 0;
         this.camera.position.z = 200;
@@ -60,8 +44,6 @@ export class MyLibrary implements Foo {
         this.scene = new THREE.Scene();
         this.scene.add(this.camera);
 
-        // this.scene.fog = new THREE.Fog(0xffffff, 0, 250);
-        // this.scene.fog = new THREE.FogExp2(0xffffff, 0.02);
 
         this.renderer = new THREE.WebGLRenderer();
         this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -98,8 +80,6 @@ export class MyLibrary implements Foo {
 
 
             if (this.renderToSVG) {
-
-
                 const cube = new THREE.BoxBufferGeometry(20, 20, 20);
                 const mesh = new THREE.Mesh(cube, new THREE.MeshBasicMaterial({
                     vertexColors: THREE.VertexColors,
@@ -111,18 +91,18 @@ export class MyLibrary implements Foo {
                 // this.scene.add(mesh);
 
 
-                const material = new THREE.PointsMaterial({color: 0x000000, size: 0.1, sizeAttenuation: true});
-                const starField = new THREE.Points(geometry, material);
+                this.pointsMaterial = new THREE.PointsMaterial({color: 0x000000, size: 0.1, sizeAttenuation: true});
+                const starField = new THREE.Points(geometry, this.pointsMaterial);
 
                 this.scene.add(starField);
 
             } else {
 
-                const textureUrl = require('./assets/black-point.png');
+                const textureUrl = require('./assets/sprites/black-point.png');
                 const sprite = new THREE.TextureLoader().load(textureUrl);
                 this.pointsMaterial = new THREE.PointsMaterial({
                     color: 0xff0000,
-                    size: 0.5,
+                    size: this.settings.particleSize,
                     map: sprite,
                     alphaTest: 0.5,
                     transparent: true,
@@ -133,6 +113,9 @@ export class MyLibrary implements Foo {
 
                 this.scene.add(starField);
             }
+
+            this.spriteUpdate(this.settings.sprite);
+            this.particlesUpdate();
 
             this.render(0);
 
@@ -147,10 +130,20 @@ export class MyLibrary implements Foo {
     };
 
     private initGui = (): void => {
-        this.gui = new GUI({autoPlace: false});
+        this.gui = new GUI({autoPlace: true});
 
-        this.gui.add(this.effectController, nameof(x => x.particleSize), 0.01, 20).step(0.1).onChange(this.particlesUpdate);
-        this.gui.close();
+        this.gui.add(this.settings, nameof<ISettings>(x => x.particleSize), 0.01, 1)
+            .step(0.01)
+            .onChange(this.particlesUpdate);
+
+        this.addPresetsToGui();
+
+        this.gui.add(this.settings, nameof<ISettings>(x => x.fog))
+            .onChange(this.fogUpdate);
+
+        this.gui.add(this.settings, nameof<ISettings>(x => x.fogDensity), 0, 0.1)
+            .step(0.001)
+            .onChange(this.fogUpdate);
 
         window.onclick = () => {
             if (!this.renderToSVG)
@@ -161,12 +154,33 @@ export class MyLibrary implements Foo {
         }
     }
 
+    private spriteUpdate = (spriteLabel: string): void => {
+        if (this.pointsMaterial === undefined)
+            return;
+
+        const preset = this.presets[spriteLabel];
+
+        this.pointsMaterial.map = preset.texture;
+    }
+
     private particlesUpdate = (): void => {
         if (this.pointsMaterial === undefined)
             return;
 
-        this.pointsMaterial.size = this.effectController.particleSize;
+        this.pointsMaterial.size = this.settings.particleSize;
     };
+
+    private fogUpdate = (): void => {
+        if (this.settings.fog === false && this.scene.fog === undefined)
+            return;
+
+        if (this.settings.fog === false) {
+            this.scene.fog = undefined;
+            return;
+        }
+
+        this.scene.fog = new THREE.FogExp2(0xffffff, this.settings.fogDensity);
+    }
 
     private render = (timestamp: number): void => {
         const time = timestamp * 0.00015;
@@ -192,4 +206,10 @@ export class MyLibrary implements Foo {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+    private addPresetsToGui() {
+        const spriteLabels = spriteCollection.map(x => x.label);
+
+        this.gui.add(this.settings, nameof<ISettings>(x => x.sprite), spriteLabels)
+            .onChange(this.spriteUpdate);
+    }
 }
