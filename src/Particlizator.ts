@@ -104,8 +104,6 @@ export class Particlizator {
             .onChange(this.fogUpdate);
 
         this.gui.add(this, nameof<Particlizator>(x => x.storeImage));
-
-        // this.gui.remember(this.settings);
     }
 
     private spriteUpdate = (spriteLabel: string): void => {
