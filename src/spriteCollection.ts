@@ -1,8 +1,5 @@
-import {
-    Texture as Three_Texture,
-    TextureLoader as Three_TextureLoader,
-    PointsMaterial as Three_PointsMaterial
-} from 'three';
+import { TextureLoader } from "./three/loaders/TextureLoader";
+import { Texture } from "./three/textures/Texture";
 
 interface ISprite {
     url: string;
@@ -23,13 +20,13 @@ export const spriteCollection: ISprite[] = [
 export class SpritePreset {
     public readonly label: string;
     public readonly url: string;
-    public readonly texture: Three_Texture;
+    public readonly texture: Texture;
 
     constructor(sprite: ISprite) {
         this.url = sprite.url;
         this.label = sprite.label;
 
-        const loader = new Three_TextureLoader();
+        const loader = new TextureLoader();
 
         this.texture = loader.load(this.url);
     }

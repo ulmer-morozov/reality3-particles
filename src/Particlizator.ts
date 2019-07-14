@@ -1,23 +1,30 @@
-import * as THREE from 'three';
-import {GUI} from 'dat.gui';
-import {PLYLoader} from 'three/examples/jsm/loaders/PLYLoader';
-import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
-import {spriteCollection, SpritePreset} from "./spriteCollection";
-import {nameof, saveImage} from "./utils";
-import {ISettings} from "./ISettings";
+import { GUI } from 'dat.gui';
+import { spriteCollection, SpritePreset } from "./spriteCollection";
+import { nameof, saveImage } from "./utils";
+import { ISettings } from "./ISettings";
+import { Scene } from './three/scenes/Scene';
+import { OrbitControls } from './three/examples/jsm/controls/OrbitControls';
+import { WebGLRenderer } from './three/renderers/WebGLRenderer';
+import { PerspectiveCamera } from './three/cameras/PerspectiveCamera';
+import { PointsMaterial } from './three/materials/PointsMaterial';
+import { BufferGeometry } from './three/core/BufferGeometry';
+import { Points } from './three/objects/Points';
+import { FogExp2 } from './three/scenes/FogExp2';
+import { Vector2 } from './three/math/Vector2';
+import { PLYLoader } from './three/examples/jsm/loaders/PLYLoader';
 
 export class Particlizator {
-    private readonly scene: THREE.Scene;
+    private readonly scene: Scene;
     private readonly controls: OrbitControls;
-    private readonly renderer: THREE.WebGLRenderer;
-    private readonly camera: THREE.PerspectiveCamera;
+    private readonly renderer: WebGLRenderer;
+    private readonly camera: PerspectiveCamera;
 
     private readonly gui: GUI;
     private readonly settings: ISettings;
     private readonly presets: { [label: string]: SpritePreset };
 
     private animationId: number;
-    private pointsMaterial: THREE.PointsMaterial;
+    private pointsMaterial: PointsMaterial;
 
     constructor(private readonly canvas: HTMLCanvasElement) {
         this.presets = {};
@@ -31,14 +38,14 @@ export class Particlizator {
             fogDensity: 0
         }
 
-        this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 3000);
+        this.camera = new PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 3000);
         this.camera.position.y = 0;
         this.camera.position.z = 200;
 
-        this.scene = new THREE.Scene();
+        this.scene = new Scene();
         this.scene.add(this.camera);
 
-        this.renderer = new THREE.WebGLRenderer({
+        this.renderer = new WebGLRenderer({
             antialias: true,
             alpha: true,
             canvas: canvas,
@@ -51,7 +58,7 @@ export class Particlizator {
 
         this.controls = new OrbitControls(this.camera, this.canvas);
 
-        this.gui = new GUI({autoPlace: true});
+        this.gui = new GUI({ autoPlace: true });
 
         this.initGui();
 
@@ -63,17 +70,17 @@ export class Particlizator {
 
         const loader = new PLYLoader();
 
-        loader.load(url, (geometry: THREE.BufferGeometry) => {
+        loader.load(url, (geometry: BufferGeometry) => {
             geometry.computeVertexNormals();
             geometry.scale(0.1, 0.1, 0.1);
 
-            this.pointsMaterial = new THREE.PointsMaterial({
+            this.pointsMaterial = new PointsMaterial({
                 alphaTest: 0.5,
                 transparent: true,
                 sizeAttenuation: true
             });
 
-            const starField = new THREE.Points(geometry, this.pointsMaterial);
+            const starField = new Points(geometry, this.pointsMaterial);
             this.scene.add(starField);
 
             this.spriteUpdate(this.settings.sprite);
@@ -97,6 +104,8 @@ export class Particlizator {
             .onChange(this.fogUpdate);
 
         this.gui.add(this, nameof<Particlizator>(x => x.storeImage));
+
+        // this.gui.remember(this.settings);
     }
 
     private spriteUpdate = (spriteLabel: string): void => {
@@ -124,7 +133,7 @@ export class Particlizator {
             return;
         }
 
-        this.scene.fog = new THREE.FogExp2(0xffffff, this.settings.fogDensity);
+        this.scene.fog = new FogExp2(0xffffff, this.settings.fogDensity);
     }
 
     private render = (timestamp: number): void => {
@@ -163,7 +172,7 @@ export class Particlizator {
         cancelAnimationFrame(this.animationId);
 
         const cameraAspect = this.camera.aspect;
-        const size = new THREE.Vector2();
+        const size = new Vector2();
 
         this.renderer.getSize(size);
         this.renderer.setPixelRatio(1);

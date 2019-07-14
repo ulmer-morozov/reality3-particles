@@ -1,4 +1,4 @@
-import { Texture as Three_Texture } from 'three';
+import { Texture } from "./three/textures/Texture";
 interface ISprite {
     url: string;
     label: string;
@@ -7,7 +7,7 @@ export declare const spriteCollection: ISprite[];
 export declare class SpritePreset {
     readonly label: string;
     readonly url: string;
-    readonly texture: Three_Texture;
+    readonly texture: Texture;
     constructor(sprite: ISprite);
 }
 export {};

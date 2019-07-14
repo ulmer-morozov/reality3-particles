@@ -1,4 +1,4 @@
-import {Particlizator} from './Particlizator';
+import { Particlizator } from './Particlizator';
 
 console.log('See this in your browser console: Typescript Webpack Starter Launched');
 
@@ -39,3 +39,7 @@ _window.dragLeaveHandler = (event: DragEvent): void => {
 
     console.log(event.dataTransfer.items[0])
 }
+
+window.onbeforeunload = () => {
+    return "Scene will be cleared. Are you sure?";
+};

@@ -8,6 +8,7 @@ const downloadBlob = (blob: Blob, name: string): void => {
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(downloadLink.href);
 }
 
 export const saveSvg = (svgEl: SVGElement, name: string): void => {
@@ -22,6 +23,7 @@ export const saveImage = (canvas: HTMLCanvasElement, name: string): void => {
     canvas.toBlob(blob => {
         downloadBlob(blob, name);
     }, "image/png", 1)
+    
 }
 
 export function nameof<T>(propertyFunction: (x: T) => any): string {
