@@ -20,7 +20,13 @@ export class Particlizator {
     private readonly camera: PerspectiveCamera;
 
     private readonly gui: GUI;
-    private readonly settings: ISettings;
+    private readonly settings: ISettings = {
+        particleSize: 0.5,
+        sprite: 'point',
+        fog: false,
+        fogDensity: 0
+    };
+
     private readonly presets: { [label: string]: SpritePreset };
 
     private animationId: number;
@@ -30,13 +36,6 @@ export class Particlizator {
         this.presets = {};
 
         spriteCollection.forEach(sprite => this.presets[sprite.label] = new SpritePreset(sprite));
-
-        this.settings = {
-            particleSize: 0.5,
-            sprite: 'point',
-            fog: false,
-            fogDensity: 0
-        }
 
         this.camera = new PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 3000);
         this.camera.position.y = 0;

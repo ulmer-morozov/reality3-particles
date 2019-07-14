@@ -28,10 +28,9 @@ export const saveImage = (canvas: HTMLCanvasElement, name: string): void => {
 
 export function nameof<T>(propertyFunction: (x: T) => any): string {
     const matches = /\.([^\.;]+);?\s*\}$/.exec(propertyFunction.toString());
-    if (matches == undefined || matches.length < 2) {
-        console.warn(`nameOf error ${propertyFunction} returns`, matches);
-        return "*default name*"
-    }
+    if (matches == null || matches.length < 2)
+        throw new Error(`nameOf error ${propertyFunction}`);
+
     return matches[1];
 }
 
