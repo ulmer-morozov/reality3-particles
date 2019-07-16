@@ -12,6 +12,9 @@ import { Points } from './three/objects/Points';
 import { FogExp2 } from './three/scenes/FogExp2';
 import { Vector2 } from './three/math/Vector2';
 import { PLYLoader } from './three/examples/jsm/loaders/PLYLoader';
+import { OBJLoader } from './three/examples/jsm/loaders/OBJLoader';
+import { Group } from './three/objects/Group';
+import { Mesh } from './three/objects/Mesh';
 
 export class Particlizator {
     private readonly scene: Scene;
@@ -67,24 +70,55 @@ export class Particlizator {
     public loadModel = (url: string): void => {
         this.scene.children.forEach(child => this.scene.remove(child));
 
-        const loader = new PLYLoader();
+        const isPlyFile = url.toLowerCase().indexOf('.ply') >= 0;
 
-        loader.load(url, (geometry: BufferGeometry) => {
-            geometry.computeVertexNormals();
-            geometry.scale(0.1, 0.1, 0.1);
+        this.pointsMaterial = new PointsMaterial({
+            alphaTest: 0.5,
+            transparent: true,
+            sizeAttenuation: true
+        });
 
-            this.pointsMaterial = new PointsMaterial({
-                alphaTest: 0.5,
-                transparent: true,
-                sizeAttenuation: true
+        if (isPlyFile) {
+            const loader = new PLYLoader();
+
+            loader.load(url, (geometry: BufferGeometry): void => {
+                geometry.computeVertexNormals();
+                geometry.scale(0.1, 0.1, 0.1);
+
+                const starField = new Points(geometry, this.pointsMaterial);
+                this.scene.add(starField);
+
+                this.spriteUpdate(this.settings.sprite);
+                this.particlesUpdate();
             });
 
-            const starField = new Points(geometry, this.pointsMaterial);
-            this.scene.add(starField);
+            return;
+        }
+
+        const loader = new OBJLoader();
+
+        loader.load(url, (group: Group): void => {
+            for (let i = 0; i < group.children.length; i++) {
+                const child = group.children[i];
+
+                if (child.type !== 'Mesh')
+                    continue;
+
+                const geometry = (child as Mesh).geometry;
+
+                geometry.computeVertexNormals();
+                geometry.scale(10, 10, 10);
+
+                const starField = new Points(geometry, this.pointsMaterial);
+                this.scene.add(starField);
+            }
 
             this.spriteUpdate(this.settings.sprite);
             this.particlesUpdate();
+
+
         });
+
 
     }
 
@@ -180,14 +214,17 @@ export class Particlizator {
 
         this.render(0);
 
-        saveImage(this.renderer.domElement, 'particle-poster');
+        saveImage(this.renderer.domElement, 'particle-poster').then
+            (
+                () => {
+                    this.renderer.setPixelRatio(devicePixelRatio);
+                    this.renderer.setSize(size.width, size.height, true);
 
-        this.renderer.setPixelRatio(devicePixelRatio);
-        this.renderer.setSize(size.width, size.height, true);
+                    this.camera.aspect = cameraAspect;
+                    this.camera.updateProjectionMatrix();
 
-        this.camera.aspect = cameraAspect;
-        this.camera.updateProjectionMatrix();
-
-        this.animate();
+                    this.animate();
+                }
+            );
     }
 }

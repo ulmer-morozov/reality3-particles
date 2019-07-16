@@ -15,8 +15,10 @@ _window.dropHandler = (event: DragEvent): void => {
 
     const file = event.dataTransfer.files[0];
 
-    if (file.name.toLowerCase().indexOf('.ply') < 0) {
-        alert("Allowed only .ply files")
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.indexOf('.ply') < 0 && fileName.indexOf('.obj') < 0) {
+        alert("Allowed only .ply or .obj files")
         return;
     }
 
