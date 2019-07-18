@@ -33,6 +33,7 @@ export declare class Particlizator {
     private scale2X;
     private scale10X;
     private scaleGeometries;
+    private rotateGeometryZ;
     private onWindowResize;
     private addPresetsToGui;
     private storeImage;

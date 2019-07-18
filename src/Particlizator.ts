@@ -184,7 +184,7 @@ export class Particlizator {
             .step(0.001)
             .onChange(this.fogUpdate);
 
-        const scaleFolder = this.gui.addFolder('geometry scale');
+        const scaleFolder = this.gui.addFolder('transform geometry');
 
         scaleFolder.add(this, nameof<Particlizator>(x => x.scale01X)).name('x0.1');
         scaleFolder.add(this, nameof<Particlizator>(x => x.scale05X)).name('x0.5');
@@ -193,6 +193,8 @@ export class Particlizator {
 
         scaleFolder.add(this, nameof<Particlizator>(x => x.flipX)).name('flip X');
         scaleFolder.add(this, nameof<Particlizator>(x => x.flipY)).name('flip Y');
+
+        scaleFolder.add(this, nameof<Particlizator>(x => x.rotateGeometryZ)).name('rotate 45');
 
 
         this.gui.add(this.settings, nameof<ISettings>(x => x.storeRatio), [1, 2, 3, 4]);
@@ -255,6 +257,10 @@ export class Particlizator {
         ratioY = ratioY === undefined ? ratioX : ratioY;
         ratioZ = ratioZ === undefined ? ratioX : ratioZ;
         this.geometries.forEach(x => x.scale(ratioX, ratioY, ratioZ));
+    }
+
+    private rotateGeometryZ = (): void => {
+        this.geometries.forEach(x => x.rotateZ(-Math.PI / 4));
     }
 
     private onWindowResize = (): void => {

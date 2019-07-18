@@ -1,6 +1,6 @@
 # Particle editor
 
-Сама утилитка 0.3
+Сама утилитка 0.4
 <https://ulmer-morozov.github.io/reality3-particles/dist/>
 
-P.S. Содержит код three.js в проект для лучшего бандлинга. <http://threejs.org>
+P.S. Сделано на three.js <http://threejs.org>
