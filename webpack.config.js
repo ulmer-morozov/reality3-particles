@@ -11,7 +11,7 @@ const plugins = [
     }
   }),
   new HtmlWebpackPlugin({
-    title: 'Typescript Webpack Starter',
+    title: 'reality3',
     template: '!!ejs-loader!src/index.html'
   }),
   new webpack.LoaderOptionsPlugin({
