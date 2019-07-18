@@ -1,4 +1,4 @@
-import { Texture } from "./three/textures/Texture";
+import { Texture } from "three";
 interface ISprite {
     url: string;
     label: string;

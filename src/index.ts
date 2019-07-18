@@ -4,10 +4,31 @@ console.log('See this in your browser console: Typescript Webpack Starter Launch
 
 const canvas = document.getElementById('main-canvas') as HTMLCanvasElement;
 const myLibrary = new Particlizator(canvas);
+
 myLibrary.animate(0);
 myLibrary.loadModel(require('./assets/pointcloud.ply'), SourceFormat.PLY);
 
 const _window = window as any;
+
+const geSourceFileType = (filename: string): SourceFormat => {
+    filename = filename !== undefined ? filename.toLowerCase() : '';
+
+    const isTypeOf = (extension: string): boolean => filename.indexOf(extension) >= 0;
+
+    if (isTypeOf('.ply'))
+        return SourceFormat.PLY;
+
+    if (isTypeOf('.obj'))
+        return SourceFormat.OBJ;
+
+    if (isTypeOf('.gltf') || isTypeOf('.glb'))
+        return SourceFormat.GLTF;
+
+    if (isTypeOf('.fbx'))
+        return SourceFormat.FBX;
+
+    return SourceFormat.NotSet;
+}
 
 _window.dropHandler = (event: DragEvent): void => {
     event.preventDefault();
@@ -15,24 +36,15 @@ _window.dropHandler = (event: DragEvent): void => {
 
     const file = event.dataTransfer.files[0];
 
-    const fileName = file.name.toLowerCase();
+    const fileType = geSourceFileType(file.name);
 
-    const isPly = fileName.indexOf('.ply') >= 0;
-    const isObj = fileName.indexOf('.obj') >= 0;
-
-    if (!isPly && !isObj) {
-        alert("Allowed only .ply or .obj files")
+    if (fileType === SourceFormat.NotSet) {
+        alert("Allowed only .ply .obj .fbx .gltf or .glb files")
         return;
     }
 
     const fileUrl = URL.createObjectURL(file);
-
-    if (isPly)
-        myLibrary.loadModel(fileUrl, SourceFormat.PLY);
-    else if (isObj)
-        myLibrary.loadModel(fileUrl, SourceFormat.OBJ);
-    else
-        console.error(`cant load url ${fileName}. wrong type`);
+    myLibrary.loadModel(fileUrl, fileType);
 
     console.log('URL ' + fileUrl);
 }

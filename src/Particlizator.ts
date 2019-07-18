@@ -2,24 +2,32 @@ import {GUI} from 'dat.gui';
 import {spriteCollection, SpritePreset} from "./spriteCollection";
 import {nameof, saveImage} from "./utils";
 import {ISettings} from "./ISettings";
-import {Scene} from './three/scenes/Scene';
-import {OrbitControls} from './three/examples/jsm/controls/OrbitControls';
-import {WebGLRenderer} from './three/renderers/WebGLRenderer';
-import {PerspectiveCamera} from './three/cameras/PerspectiveCamera';
-import {PointsMaterial} from './three/materials/PointsMaterial';
-import {BufferGeometry} from './three/core/BufferGeometry';
-import {Points} from './three/objects/Points';
-import {FogExp2} from './three/scenes/FogExp2';
-import {Vector2} from './three/math/Vector2';
-import {PLYLoader} from './three/examples/jsm/loaders/PLYLoader';
-import {OBJLoader} from './three/examples/jsm/loaders/OBJLoader';
-import {Group} from './three/objects/Group';
-import {Mesh} from './three/objects/Mesh';
-import {Geometry} from "./three/core/Geometry";
+import {
+    AxesHelper,
+    BufferGeometry,
+    FogExp2,
+    Geometry,
+    Group,
+    Mesh, MeshNormalMaterial, Object3D,
+    PerspectiveCamera,
+    Points,
+    PointsMaterial,
+    Scene,
+    WebGLRenderer
+} from "three";
+
+import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
+import {PLYLoader} from "three/examples/jsm/loaders/PLYLoader";
+import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader";
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
+import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader";
 
 export enum SourceFormat {
+    NotSet = 0,
     OBJ = 1,
-    PLY = 2
+    PLY = 2,
+    GLTF = 3,
+    FBX = 4
 }
 
 export class Particlizator {
@@ -27,6 +35,8 @@ export class Particlizator {
     private readonly controls: OrbitControls;
     private readonly renderer: WebGLRenderer;
     private readonly camera: PerspectiveCamera;
+
+    private readonly axis: AxesHelper;
 
     private readonly gui: GUI;
     private readonly settings: ISettings = {
@@ -69,6 +79,10 @@ export class Particlizator {
 
         this.controls = new OrbitControls(this.camera, this.canvas);
 
+        this.controls.screenSpacePanning = true;
+
+        this.axis = new AxesHelper(10);
+
         this.gui = new GUI({autoPlace: true});
 
         this.initGui();
@@ -77,7 +91,11 @@ export class Particlizator {
     }
 
     public loadModel = (url: string, format: SourceFormat): void => {
-        this.scene.children.forEach(child => this.scene.remove(child));
+        for (let i = this.scene.children.length - 1; i >= 0; i--)
+            this.scene.remove(this.scene.children[i]);
+
+        this.scene.add(this.axis);
+
         this.geometries.splice(0, this.geometries.length);
 
         this.pointsMaterial = new PointsMaterial({
@@ -87,9 +105,7 @@ export class Particlizator {
         });
 
         if (format === SourceFormat.PLY) {
-            const loader = new PLYLoader();
-
-            loader.load(url, (geometry: BufferGeometry): void => {
+            const onLoadGeometry = (geometry: BufferGeometry): void => {
                 geometry.computeVertexNormals();
                 geometry.scale(0.1, 0.1, 0.1);
 
@@ -100,34 +116,54 @@ export class Particlizator {
 
                 this.spriteUpdate(this.settings.sprite);
                 this.particlesUpdate();
-            });
+            };
 
+            const loader = new PLYLoader();
+
+            loader.load(url, onLoadGeometry);
             return;
         }
 
+        const onLoadObjects = (items: Object3D[]): void => {
+            for (let i = 0; i < items.length; i++) {
+                const child = items[i];
+
+                if (child.type !== 'Mesh')
+                    continue;
+
+                const geometry = (child as Mesh).geometry;
+
+                geometry.computeVertexNormals();
+                this.geometries.push(geometry);
+
+                const starField = new Points(geometry, this.pointsMaterial);
+                this.scene.add(starField);
+            }
+
+            this.spriteUpdate(this.settings.sprite);
+            this.particlesUpdate();
+        };
+
+        const onLoadGroup = (group: Group): void => onLoadObjects(group.children);
+
         if (format === SourceFormat.OBJ) {
             const loader = new OBJLoader();
+            loader.load(url, onLoadGroup);
+            return;
+        }
 
-            loader.load(url, (group: Group): void => {
-                for (let i = 0; i < group.children.length; i++) {
-                    const child = group.children[i];
+        if (format === SourceFormat.FBX) {
+            const loader = new FBXLoader();
+            loader.load(url, onLoadGroup);
+            return;
+        }
 
-                    if (child.type !== 'Mesh')
-                        continue;
-
-                    const geometry = (child as Mesh).geometry;
-
-                    geometry.computeVertexNormals();
-                    this.geometries.push(geometry);
-
-                    const starField = new Points(geometry, this.pointsMaterial);
-                    this.scene.add(starField);
-                }
-
-                this.spriteUpdate(this.settings.sprite);
-                this.particlesUpdate();
+        if (format === SourceFormat.GLTF) {
+            const loader = new GLTFLoader();
+            loader.load(url, gltf => {
+            debugger;
+                onLoadObjects(gltf.scene.children);
             });
-
             return;
         }
 
@@ -154,6 +190,10 @@ export class Particlizator {
         scaleFolder.add(this, nameof<Particlizator>(x => x.scale05X)).name('x0.5');
         scaleFolder.add(this, nameof<Particlizator>(x => x.scale2X)).name('x2');
         scaleFolder.add(this, nameof<Particlizator>(x => x.scale10X)).name('x10');
+
+        scaleFolder.add(this, nameof<Particlizator>(x => x.flipX)).name('flip X');
+        scaleFolder.add(this, nameof<Particlizator>(x => x.flipY)).name('flip Y');
+
 
         this.gui.add(this.settings, nameof<ISettings>(x => x.storeRatio), [1, 2, 3, 4]);
         this.gui.add(this, nameof<Particlizator>(x => x.storeImage));
@@ -203,13 +243,18 @@ export class Particlizator {
         this.render(time);
     }
 
+    private flipX = () => this.scaleGeometries(-1, 1, 1);
+    private flipY = () => this.scaleGeometries(1, -1, 1);
     private scale01X = () => this.scaleGeometries(0.1);
+
     private scale05X = () => this.scaleGeometries(0.5);
     private scale2X = () => this.scaleGeometries(2);
     private scale10X = () => this.scaleGeometries(10);
 
-    private scaleGeometries = (ratio: number): void => {
-        this.geometries.forEach(x => x.scale(ratio, ratio, ratio));
+    private scaleGeometries = (ratioX: number, ratioY?: number, ratioZ?: number): void => {
+        ratioY = ratioY === undefined ? ratioX : ratioY;
+        ratioZ = ratioZ === undefined ? ratioX : ratioZ;
+        this.geometries.forEach(x => x.scale(ratioX, ratioY, ratioZ));
     }
 
     private onWindowResize = (): void => {
@@ -231,6 +276,8 @@ export class Particlizator {
 
         cancelAnimationFrame(this.animationId);
 
+        this.axis.visible = false;
+
         // const cameraAspect = this.camera.aspect;
         // const size = new Vector2();
 
@@ -251,6 +298,7 @@ export class Particlizator {
         (
             () => {
                 this.renderer.setPixelRatio(devicePixelRatio);
+                this.axis.visible = true;
                 // this.renderer.setSize(size.width, size.height, true);
 
                 // this.camera.aspect = cameraAspect;
