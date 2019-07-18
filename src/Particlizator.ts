@@ -171,7 +171,7 @@ export class Particlizator {
     }
 
     private initGui = (): void => {
-        this.gui.add(this.settings, nameof<ISettings>(x => x.particleSize), 0.01, 1)
+        this.gui.add(this.settings, nameof<ISettings>(x => x.particleSize), 0.01, 2)
             .step(0.01)
             .onChange(this.particlesUpdate);
 

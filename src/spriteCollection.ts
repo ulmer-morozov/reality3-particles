@@ -13,7 +13,10 @@ export const spriteCollection: ISprite[] = [
     {url: require('./assets/sprites/lift_spt.png'), label: 'lift'},
     {url: require('./assets/sprites/love_spt.png'), label: 'love'},
     {url: require('./assets/sprites/stripes_spt.png'), label: 'stripes'},
-    {url: require('./assets/sprites/X_spt.png'), label: 'cross'}
+    {url: require('./assets/sprites/X_spt.png'), label: 'cross'},
+    {url: require('./assets/sprites/ptz.png'), label: 'ptz'},
+    {url: require('./assets/sprites/Gerb1.png'), label: 'Gerb1'},
+    {url: require('./assets/sprites/Gerb2.png'), label: 'Gerb2'},
 ];
 
 export class SpritePreset {
