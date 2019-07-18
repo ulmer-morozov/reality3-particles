@@ -1,3 +1,7 @@
+export declare enum SourceFormat {
+    OBJ = 1,
+    PLY = 2
+}
 export declare class Particlizator {
     private readonly canvas;
     private readonly scene;
@@ -11,7 +15,7 @@ export declare class Particlizator {
     private animationId;
     private pointsMaterial;
     constructor(canvas: HTMLCanvasElement);
-    loadModel: (url: string) => void;
+    loadModel: (url: string, format: SourceFormat) => void;
     private initGui;
     private spriteUpdate;
     private particlesUpdate;

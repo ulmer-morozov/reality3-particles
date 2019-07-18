@@ -17,6 +17,11 @@ import {Group} from './three/objects/Group';
 import {Mesh} from './three/objects/Mesh';
 import {Geometry} from "./three/core/Geometry";
 
+export enum SourceFormat {
+    OBJ = 1,
+    PLY = 2
+}
+
 export class Particlizator {
     private readonly scene: Scene;
     private readonly controls: OrbitControls;
@@ -71,11 +76,9 @@ export class Particlizator {
         window.addEventListener('resize', this.onWindowResize, false);
     }
 
-    public loadModel = (url: string): void => {
+    public loadModel = (url: string, format: SourceFormat): void => {
         this.scene.children.forEach(child => this.scene.remove(child));
         this.geometries.splice(0, this.geometries.length);
-
-        const isPlyFile = url.toLowerCase().indexOf('.ply') >= 0;
 
         this.pointsMaterial = new PointsMaterial({
             alphaTest: 0.5,
@@ -83,7 +86,7 @@ export class Particlizator {
             sizeAttenuation: true
         });
 
-        if (isPlyFile) {
+        if (format === SourceFormat.PLY) {
             const loader = new PLYLoader();
 
             loader.load(url, (geometry: BufferGeometry): void => {
@@ -102,31 +105,33 @@ export class Particlizator {
             return;
         }
 
-        const loader = new OBJLoader();
+        if (format === SourceFormat.OBJ) {
+            const loader = new OBJLoader();
 
-        loader.load(url, (group: Group): void => {
-            for (let i = 0; i < group.children.length; i++) {
-                const child = group.children[i];
+            loader.load(url, (group: Group): void => {
+                for (let i = 0; i < group.children.length; i++) {
+                    const child = group.children[i];
 
-                if (child.type !== 'Mesh')
-                    continue;
+                    if (child.type !== 'Mesh')
+                        continue;
 
-                const geometry = (child as Mesh).geometry;
+                    const geometry = (child as Mesh).geometry;
 
-                geometry.computeVertexNormals();
-                this.geometries.push(geometry);
+                    geometry.computeVertexNormals();
+                    this.geometries.push(geometry);
 
-                const starField = new Points(geometry, this.pointsMaterial);
-                this.scene.add(starField);
-            }
+                    const starField = new Points(geometry, this.pointsMaterial);
+                    this.scene.add(starField);
+                }
 
-            this.spriteUpdate(this.settings.sprite);
-            this.particlesUpdate();
+                this.spriteUpdate(this.settings.sprite);
+                this.particlesUpdate();
+            });
 
+            return;
+        }
 
-        });
-
-
+        throw new Error(`Невалидный формат загружаемой модели`);
     }
 
     private initGui = (): void => {

@@ -1,11 +1,11 @@
-import { Particlizator } from './Particlizator';
+import {Particlizator, SourceFormat} from './Particlizator';
 
 console.log('See this in your browser console: Typescript Webpack Starter Launched');
 
 const canvas = document.getElementById('main-canvas') as HTMLCanvasElement;
 const myLibrary = new Particlizator(canvas);
 myLibrary.animate(0);
-myLibrary.loadModel(require('./assets/pointcloud.ply'));
+myLibrary.loadModel(require('./assets/pointcloud.ply'), SourceFormat.PLY);
 
 const _window = window as any;
 
@@ -17,14 +17,23 @@ _window.dropHandler = (event: DragEvent): void => {
 
     const fileName = file.name.toLowerCase();
 
-    if (fileName.indexOf('.ply') < 0 && fileName.indexOf('.obj') < 0) {
+    const isPly = fileName.indexOf('.ply') >= 0;
+    const isObj = fileName.indexOf('.obj') >= 0;
+
+    if (!isPly && !isObj) {
         alert("Allowed only .ply or .obj files")
         return;
     }
 
     const fileUrl = URL.createObjectURL(file);
 
-    myLibrary.loadModel(fileUrl);
+    if (isPly)
+        myLibrary.loadModel(fileUrl, SourceFormat.PLY);
+    else if (isObj)
+        myLibrary.loadModel(fileUrl, SourceFormat.OBJ);
+    else
+        console.error(`cant load url ${fileName}. wrong type`);
+
     console.log('URL ' + fileUrl);
 }
 
