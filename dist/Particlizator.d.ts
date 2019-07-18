@@ -6,6 +6,7 @@ export declare class Particlizator {
     private readonly camera;
     private readonly gui;
     private readonly settings;
+    private readonly geometries;
     private readonly presets;
     private animationId;
     private pointsMaterial;
@@ -17,6 +18,11 @@ export declare class Particlizator {
     private fogUpdate;
     private render;
     animate: (time?: number) => void;
+    private scale01X;
+    private scale05X;
+    private scale2X;
+    private scale10X;
+    private scaleGeometries;
     private onWindowResize;
     private addPresetsToGui;
     private storeImage;

@@ -3,4 +3,5 @@ export interface ISettings {
     sprite: string;
     fog: boolean;
     fogDensity: number;
+    storeRatio: number;
 }

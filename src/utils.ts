@@ -21,7 +21,7 @@ export const saveImage = (canvas: HTMLCanvasElement, name: string): Promise<void
                     setTimeout(() => {
                         URL.revokeObjectURL(blobUrl);
                         resolve();
-                    }, 1000);
+                    }, 100);
                 },
                 "image/png",
                 1

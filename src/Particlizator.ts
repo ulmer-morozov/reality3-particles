@@ -1,20 +1,21 @@
-import { GUI } from 'dat.gui';
-import { spriteCollection, SpritePreset } from "./spriteCollection";
-import { nameof, saveImage } from "./utils";
-import { ISettings } from "./ISettings";
-import { Scene } from './three/scenes/Scene';
-import { OrbitControls } from './three/examples/jsm/controls/OrbitControls';
-import { WebGLRenderer } from './three/renderers/WebGLRenderer';
-import { PerspectiveCamera } from './three/cameras/PerspectiveCamera';
-import { PointsMaterial } from './three/materials/PointsMaterial';
-import { BufferGeometry } from './three/core/BufferGeometry';
-import { Points } from './three/objects/Points';
-import { FogExp2 } from './three/scenes/FogExp2';
-import { Vector2 } from './three/math/Vector2';
-import { PLYLoader } from './three/examples/jsm/loaders/PLYLoader';
-import { OBJLoader } from './three/examples/jsm/loaders/OBJLoader';
-import { Group } from './three/objects/Group';
-import { Mesh } from './three/objects/Mesh';
+import {GUI} from 'dat.gui';
+import {spriteCollection, SpritePreset} from "./spriteCollection";
+import {nameof, saveImage} from "./utils";
+import {ISettings} from "./ISettings";
+import {Scene} from './three/scenes/Scene';
+import {OrbitControls} from './three/examples/jsm/controls/OrbitControls';
+import {WebGLRenderer} from './three/renderers/WebGLRenderer';
+import {PerspectiveCamera} from './three/cameras/PerspectiveCamera';
+import {PointsMaterial} from './three/materials/PointsMaterial';
+import {BufferGeometry} from './three/core/BufferGeometry';
+import {Points} from './three/objects/Points';
+import {FogExp2} from './three/scenes/FogExp2';
+import {Vector2} from './three/math/Vector2';
+import {PLYLoader} from './three/examples/jsm/loaders/PLYLoader';
+import {OBJLoader} from './three/examples/jsm/loaders/OBJLoader';
+import {Group} from './three/objects/Group';
+import {Mesh} from './three/objects/Mesh';
+import {Geometry} from "./three/core/Geometry";
 
 export class Particlizator {
     private readonly scene: Scene;
@@ -27,8 +28,11 @@ export class Particlizator {
         particleSize: 0.5,
         sprite: 'point',
         fog: false,
-        fogDensity: 0
+        fogDensity: 0,
+        storeRatio: 2
     };
+
+    private readonly geometries: (BufferGeometry | Geometry)[] = [];
 
     private readonly presets: { [label: string]: SpritePreset };
 
@@ -54,13 +58,13 @@ export class Particlizator {
             preserveDrawingBuffer: true // для экспорта
         });
 
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(devicePixelRatio);
         this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
         this.renderer.autoClear = true;
 
         this.controls = new OrbitControls(this.camera, this.canvas);
 
-        this.gui = new GUI({ autoPlace: true });
+        this.gui = new GUI({autoPlace: true});
 
         this.initGui();
 
@@ -69,6 +73,7 @@ export class Particlizator {
 
     public loadModel = (url: string): void => {
         this.scene.children.forEach(child => this.scene.remove(child));
+        this.geometries.splice(0, this.geometries.length);
 
         const isPlyFile = url.toLowerCase().indexOf('.ply') >= 0;
 
@@ -84,6 +89,8 @@ export class Particlizator {
             loader.load(url, (geometry: BufferGeometry): void => {
                 geometry.computeVertexNormals();
                 geometry.scale(0.1, 0.1, 0.1);
+
+                this.geometries.push(geometry);
 
                 const starField = new Points(geometry, this.pointsMaterial);
                 this.scene.add(starField);
@@ -107,7 +114,7 @@ export class Particlizator {
                 const geometry = (child as Mesh).geometry;
 
                 geometry.computeVertexNormals();
-                geometry.scale(10, 10, 10);
+                this.geometries.push(geometry);
 
                 const starField = new Points(geometry, this.pointsMaterial);
                 this.scene.add(starField);
@@ -136,6 +143,14 @@ export class Particlizator {
             .step(0.001)
             .onChange(this.fogUpdate);
 
+        const scaleFolder = this.gui.addFolder('geometry scale');
+
+        scaleFolder.add(this, nameof<Particlizator>(x => x.scale01X)).name('x0.1');
+        scaleFolder.add(this, nameof<Particlizator>(x => x.scale05X)).name('x0.5');
+        scaleFolder.add(this, nameof<Particlizator>(x => x.scale2X)).name('x2');
+        scaleFolder.add(this, nameof<Particlizator>(x => x.scale10X)).name('x10');
+
+        this.gui.add(this.settings, nameof<ISettings>(x => x.storeRatio), [1, 2, 3, 4]);
         this.gui.add(this, nameof<Particlizator>(x => x.storeImage));
     }
 
@@ -183,6 +198,15 @@ export class Particlizator {
         this.render(time);
     }
 
+    private scale01X = () => this.scaleGeometries(0.1);
+    private scale05X = () => this.scaleGeometries(0.5);
+    private scale2X = () => this.scaleGeometries(2);
+    private scale10X = () => this.scaleGeometries(10);
+
+    private scaleGeometries = (ratio: number): void => {
+        this.geometries.forEach(x => x.scale(ratio, ratio, ratio));
+    }
+
     private onWindowResize = (): void => {
         this.camera.aspect = this.canvas.clientWidth / this.canvas.clientHeight;
         this.camera.updateProjectionMatrix();
@@ -202,29 +226,33 @@ export class Particlizator {
 
         cancelAnimationFrame(this.animationId);
 
-        const cameraAspect = this.camera.aspect;
-        const size = new Vector2();
+        // const cameraAspect = this.camera.aspect;
+        // const size = new Vector2();
 
-        this.renderer.getSize(size);
+        // this.renderer.getSize(size);
         this.renderer.setPixelRatio(1);
-        this.renderer.setSize(4094, 4096, true);
 
-        this.camera.aspect = 1;
-        this.camera.updateProjectionMatrix();
+        // const sideRes = 4096;
+
+        // this.renderer.setSize(sideRes, sideRes, true);
+        this.renderer.setPixelRatio(this.settings.storeRatio);
+
+        // this.camera.aspect = 1;
+        // this.camera.updateProjectionMatrix();
 
         this.render(0);
 
         saveImage(this.renderer.domElement, 'particle-poster').then
-            (
-                () => {
-                    this.renderer.setPixelRatio(devicePixelRatio);
-                    this.renderer.setSize(size.width, size.height, true);
+        (
+            () => {
+                this.renderer.setPixelRatio(devicePixelRatio);
+                // this.renderer.setSize(size.width, size.height, true);
 
-                    this.camera.aspect = cameraAspect;
-                    this.camera.updateProjectionMatrix();
+                // this.camera.aspect = cameraAspect;
+                // this.camera.updateProjectionMatrix();
 
-                    this.animate();
-                }
-            );
+                this.animate();
+            }
+        );
     }
 }
